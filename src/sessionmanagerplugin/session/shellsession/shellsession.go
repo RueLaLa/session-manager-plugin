@@ -38,7 +38,7 @@ type ShellSession struct {
 
 	// SizeData is used to store size data at session level to compare with new size.
 	SizeData          message.SizeData
-	originalTermState term.Term
+	originalTermState *term.State
 }
 
 var GetTerminalSizeCall = func(fd int) (width int, height int, err error) {
