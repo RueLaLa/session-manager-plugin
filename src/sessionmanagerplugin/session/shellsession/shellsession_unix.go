@@ -19,42 +19,17 @@ package shellsession
 
 import (
 	"bufio"
-	"bytes"
 	"os"
-	"os/exec"
 	"time"
 
 	"github.com/aws/session-manager-plugin/src/log"
 	"github.com/aws/session-manager-plugin/src/message"
+	"golang.org/x/term"
 )
-
-// disableEchoAndInputBuffering disables echo to avoid double echo and disable input buffering
-func (s *ShellSession) disableEchoAndInputBuffering() {
-	getState(&s.originalSttyState)
-	setState(bytes.NewBufferString("cbreak"))
-	setState(bytes.NewBufferString("-echo"))
-}
-
-// getState gets current state of terminal
-func getState(state *bytes.Buffer) error {
-	cmd := exec.Command("stty", "-g")
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = state
-	return cmd.Run()
-}
-
-// setState sets the new settings to terminal
-func setState(state *bytes.Buffer) error {
-	cmd := exec.Command("stty", state.String())
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	return cmd.Run()
-}
 
 // stop restores the terminal settings and exits
 func (s *ShellSession) Stop() {
-	setState(&s.originalSttyState)
-	setState(bytes.NewBufferString("echo")) // for linux and ubuntu
+	term.Restore(int(os.Stdin.Fd()), s.originalTermState)
 }
 
 // handleKeyboardInput handles input entered by customer on terminal
@@ -63,7 +38,12 @@ func (s *ShellSession) handleKeyboardInput(log log.T) (err error) {
 		stdinBytesLen int
 	)
 
-	s.disableEchoAndInputBuffering()
+	s.originalTermState, err = term.MakeRaw(int(os.Stdin.Fd()))
+	if err != nil {
+		log.Errorf("Error switching terminal to raw mode: %s", err)
+		return
+	}
+
 	ch := make(chan []byte)
 	go func(ch chan []byte) {
 		reader := bufio.NewReader(os.Stdin)
