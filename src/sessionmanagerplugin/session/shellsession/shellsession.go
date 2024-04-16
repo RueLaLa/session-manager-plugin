@@ -15,7 +15,6 @@
 package shellsession
 
 import (
-	"bytes"
 	"encoding/json"
 	"os"
 	"os/signal"
@@ -26,7 +25,7 @@ import (
 	"github.com/aws/session-manager-plugin/src/message"
 	"github.com/aws/session-manager-plugin/src/sessionmanagerplugin/session"
 	"github.com/aws/session-manager-plugin/src/sessionmanagerplugin/session/sessionutil"
-	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/term"
 )
 
 const (
@@ -39,11 +38,11 @@ type ShellSession struct {
 
 	// SizeData is used to store size data at session level to compare with new size.
 	SizeData          message.SizeData
-	originalSttyState bytes.Buffer
+	originalTermState term.Term
 }
 
 var GetTerminalSizeCall = func(fd int) (width int, height int, err error) {
-	return terminal.GetSize(fd)
+	return term.GetSize(fd)
 }
 
 func init() {
