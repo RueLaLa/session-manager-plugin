@@ -20,7 +20,6 @@ import (
 	"time"
 
 	"github.com/aws/session-manager-plugin/src/datachannel"
-	"github.com/aws/session-manager-plugin/src/log"
 	"github.com/aws/session-manager-plugin/src/message"
 	"github.com/stretchr/testify/assert"
 )
@@ -36,7 +35,7 @@ func TestReadStream(t *testing.T) {
 		Session: session,
 		portSessionType: &MuxPortForwarding{
 			session:   session,
-			muxClient: &MuxClient{in, nil},
+			muxClient: &MuxClient{in, nil, nil},
 			mgsConn:   &MgsConn{nil, out},
 		},
 	}
@@ -46,13 +45,13 @@ func TestReadStream(t *testing.T) {
 	}()
 
 	var actualPayload []byte
-	datachannel.SendMessageCall = func(log log.T, dataChannel *datachannel.DataChannel, input []byte, inputType int) error {
+	datachannel.SendMessageCall = func(dataChannel *datachannel.DataChannel, input []byte, inputType int) error {
 		actualPayload = input
 		return nil
 	}
 
 	go func() {
-		portSession.portSessionType.ReadStream(mockLog)
+		portSession.portSessionType.ReadStream()
 	}()
 
 	select {
@@ -60,7 +59,7 @@ func TestReadStream(t *testing.T) {
 	}
 
 	deserializedMsg := &message.ClientMessage{}
-	err := deserializedMsg.DeserializeClientMessage(mockLog, actualPayload)
+	err := deserializedMsg.DeserializeClientMessage(actualPayload)
 	assert.Nil(t, err)
 	assert.Equal(t, outputMessage.Payload, deserializedMsg.Payload)
 }

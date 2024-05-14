@@ -1,16 +1,3 @@
-// Copyright 2018 Amazon.com, Inc. or its affiliates. All Rights Reserved.
-//
-// Licensed under the Apache License, Version 2.0 (the "License"). You may not
-// use this file except in compliance with the License. A copy of the
-// License is located at
-//
-// http://aws.amazon.com/apache2.0/
-//
-// or in the "license" file accompanying this file. This file is distributed
-// on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-// either express or implied. See the License for the specific language governing
-// permissions and limitations under the License.
-
 //go:build windows
 // +build windows
 
@@ -58,7 +45,7 @@ func (s *ShellSession) Stop() {
 }
 
 // handleKeyboardInput handles input entered by customer on terminal
-func (s *ShellSession) handleKeyboardInput(log log.T) (err error) {
+func (s *ShellSession) handleKeyboardInput() (err error) {
 	var (
 		character rune         //character input from keyboard
 		key       keyboard.Key //special keys like arrows and function keys
@@ -87,13 +74,13 @@ func (s *ShellSession) handleKeyboardInput(log log.T) (err error) {
 	for {
 		select {
 		case <-time.After(time.Second):
-			if s.Session.DataChannel.IsSessionEnded() == true {
+			if s.Session.DataChannel.IsSessionEnded() {
 				s.Stop()
 				return
 			}
 		case charStr := <-charCH:
 			charBytes := []byte(string(charStr))
-			if err = s.Session.DataChannel.SendInputDataMessage(log, message.Output, charBytes); err != nil {
+			if err = s.Session.DataChannel.SendInputDataMessage(message.Output, charBytes); err != nil {
 				log.Errorf("Failed to send UTF8 char: %v", err)
 				return
 			}
@@ -102,11 +89,10 @@ func (s *ShellSession) handleKeyboardInput(log log.T) (err error) {
 			if byteValue, ok := specialKeysInputMap[key]; ok {
 				keyBytes = byteValue
 			}
-			if err = s.Session.DataChannel.SendInputDataMessage(log, message.Output, keyBytes); err != nil {
+			if err = s.Session.DataChannel.SendInputDataMessage(message.Output, keyBytes); err != nil {
 				log.Errorf("Failed to send UTF8 char: %v", err)
 				return
 			}
 		}
 	}
-	return
 }

@@ -24,7 +24,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go/service/kms/kmsiface"
 	communicatorMocks "github.com/aws/session-manager-plugin/src/communicator/mocks"
 	"github.com/aws/session-manager-plugin/src/config"
 	"github.com/aws/session-manager-plugin/src/encryption"
@@ -275,7 +274,7 @@ func TestResendStreamDataMessageScheduler(t *testing.T) {
 	}()
 
 	SendMessageCallCount := 0
-	SendMessageCall = func(log log.T, dataChannel *DataChannel, input []byte, inputType int) error {
+	SendMessageCall = func(dataChannel *DataChannel, input []byte, inputType int) error {
 		SendMessageCallCount++
 		return nil
 	}
@@ -290,12 +289,12 @@ func TestDataChannelIncomingMessageHandlerForExpectedInputStreamDataMessage(t *t
 	dataChannel.wsChannel = mockChannel
 
 	SendAcknowledgeMessageCallCount := 0
-	SendAcknowledgeMessageCall = func(log log.T, dataChannel *DataChannel, streamDataMessage message.ClientMessage) error {
+	SendAcknowledgeMessageCall = func(dataChannel *DataChannel, streamDataMessage message.ClientMessage) error {
 		SendAcknowledgeMessageCallCount++
 		return nil
 	}
 
-	var handler OutputStreamDataMessageHandler = func(log log.T, outputMessage message.ClientMessage) (bool, error) {
+	var handler OutputStreamDataMessageHandler = func(outputMessage message.ClientMessage) (bool, error) {
 		return true, nil
 	}
 
@@ -334,7 +333,7 @@ func TestDataChannelIncomingMessageHandlerForUnexpectedInputStreamDataMessage(t 
 	dataChannel.IncomingMessageBuffer.Capacity = 2
 
 	SendAcknowledgeMessageCallCount := 0
-	SendAcknowledgeMessageCall = func(log log.T, dataChannel *DataChannel, streamDataMessage message.ClientMessage) error {
+	SendAcknowledgeMessageCall = func(dataChannel *DataChannel, streamDataMessage message.ClientMessage) error {
 		SendAcknowledgeMessageCallCount++
 		return nil
 	}
@@ -374,7 +373,7 @@ func TestDataChannelIncomingMessageHandlerForAcknowledgeMessage(t *testing.T) {
 	}
 
 	ProcessAcknowledgedMessageCallCount := 0
-	ProcessAcknowledgedMessageCall = func(log log.T, dataChannel *DataChannel, acknowledgeMessage message.AcknowledgeContent) error {
+	ProcessAcknowledgedMessageCall = func(dataChannel *DataChannel, acknowledgeMessage message.AcknowledgeContent) error {
 		ProcessAcknowledgedMessageCallCount++
 		return nil
 	}
@@ -414,7 +413,7 @@ func TestDataChannelIncomingMessageHandlerForPausePublicationessage(t *testing.T
 		}
 	}
 
-	var handler OutputStreamDataMessageHandler = func(log log.T, outputMessage message.ClientMessage) (bool, error) {
+	var handler OutputStreamDataMessageHandler = func(outputMessage message.ClientMessage) (bool, error) {
 		return true, nil
 	}
 
@@ -436,7 +435,7 @@ func TestHandshakeRequestHandler(t *testing.T) {
 		uint32(message.HandshakeRequestPayloadType), handshakeRequestBytes)
 	handshakeRequestMessageBytes, _ := clientMessage.SerializeClientMessage(mockLogger)
 
-	newEncrypter = func(log log.T, kmsKeyIdInput string, context map[string]*string, KMSService kmsiface.KMSAPI) (encryption.IEncrypter, error) {
+	newEncrypter = func(kmsKeyIdInput string, context map[string]string) (encryption.IEncrypter, error) {
 		expectedContext := map[string]*string{"aws:ssm:SessionId": &sessionId, "aws:ssm:TargetId": &instanceId}
 		assert.Equal(t, kmsKeyId, kmsKeyIdInput)
 		assert.Equal(t, expectedContext, context)
@@ -483,7 +482,7 @@ func TestHandleOutputMessageForDefaultTypeWithError(t *testing.T) {
 	clientMessage := getClientMessage(0, message.OutputStreamMessage,
 		uint32(message.Output), payload)
 	rawMessage := []byte("rawMessage")
-	var handler OutputStreamDataMessageHandler = func(log log.T, outputMessage message.ClientMessage) (bool, error) {
+	var handler OutputStreamDataMessageHandler = func(outputMessage message.ClientMessage) (bool, error) {
 		return true, log.Errorf("OutputStreamDataMessageHandler Error")
 	}
 	dataChannel.RegisterOutputStreamHandler(handler, true)
@@ -526,7 +525,7 @@ func TestProcessOutputMessageWithHandlers(t *testing.T) {
 	mockChannel := &communicatorMocks.IWebSocketChannel{}
 	dataChannel.wsChannel = mockChannel
 
-	var handler OutputStreamDataMessageHandler = func(log log.T, outputMessage message.ClientMessage) (bool, error) {
+	var handler OutputStreamDataMessageHandler = func(outputMessage message.ClientMessage) (bool, error) {
 		return true, log.Errorf("OutputStreamDataMessageHandler Error")
 	}
 	dataChannel.RegisterOutputStreamHandler(handler, true)

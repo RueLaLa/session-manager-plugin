@@ -1,16 +1,3 @@
-// Copyright 2018 Amazon.com, Inc. or its affiliates. All Rights Reserved.
-//
-// Licensed under the Apache License, Version 2.0 (the "License"). You may not
-// use this file except in compliance with the License. A copy of the
-// License is located at
-//
-// http://aws.amazon.com/apache2.0/
-//
-// or in the "license" file accompanying this file. This file is distributed
-// on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-// either express or implied. See the License for the specific language governing
-// permissions and limitations under the License.
-
 //go:build darwin || freebsd || linux || netbsd || openbsd
 // +build darwin freebsd linux netbsd openbsd
 
@@ -33,7 +20,7 @@ func (s *ShellSession) Stop() {
 }
 
 // handleKeyboardInput handles input entered by customer on terminal
-func (s *ShellSession) handleKeyboardInput(log log.T) (err error) {
+func (s *ShellSession) handleKeyboardInput() (err error) {
 	var (
 		stdinBytesLen int
 	)
@@ -61,7 +48,7 @@ func (s *ShellSession) handleKeyboardInput(log log.T) (err error) {
 				return
 			}
 		case stdinBytes := <-ch:
-			if err = s.Session.DataChannel.SendInputDataMessage(log, message.Output, stdinBytes[:stdinBytesLen]); err != nil {
+			if err = s.Session.DataChannel.SendInputDataMessage(message.Output, stdinBytes[:stdinBytesLen]); err != nil {
 				return
 			}
 		}

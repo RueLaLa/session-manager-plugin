@@ -1,16 +1,3 @@
-// Copyright 2018 Amazon.com, Inc. or its affiliates. All Rights Reserved.
-//
-// Licensed under the Apache License, Version 2.0 (the "License"). You may not
-// use this file except in compliance with the License. A copy of the
-// License is located at
-//
-// http://aws.amazon.com/apache2.0/
-//
-// or in the "license" file accompanying this file. This file is distributed
-// on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-// either express or implied. See the License for the specific language governing
-// permissions and limitations under the License.
-
 //go:build windows
 // +build windows
 
@@ -18,7 +5,6 @@
 package sessionutil
 
 import (
-	"fmt"
 	"net"
 	"os"
 	"syscall"
@@ -34,7 +20,7 @@ type DisplayMode struct {
 	handle windows.Handle
 }
 
-func (d *DisplayMode) InitDisplayMode(log log.T) {
+func (d *DisplayMode) InitDisplayMode() {
 	var (
 		state          uint32
 		fileDescriptor int
@@ -61,7 +47,7 @@ func (d *DisplayMode) InitDisplayMode(log log.T) {
 }
 
 // DisplayMessage function displays the output on the screen
-func (d *DisplayMode) DisplayMessage(log log.T, message message.ClientMessage) {
+func (d *DisplayMode) DisplayMessage(message message.ClientMessage) {
 	var (
 		done *uint32
 		err  error
@@ -71,14 +57,13 @@ func (d *DisplayMode) DisplayMessage(log log.T, message message.ClientMessage) {
 	// refer - https://docs.microsoft.com/en-us/windows/desktop/api/fileapi/nf-fileapi-writefile
 	if err = windows.WriteFile(d.handle, message.Payload, done, nil); err != nil {
 		log.Errorf("error occurred while writing to file: %v", err)
-		fmt.Fprintf(os.Stdout, "\nError getting the output. %s\n", err.Error())
 		return
 	}
 }
 
 // NewListener starts a new socket listener on the address.
 // unix sockets are not supported in older windows versions, start tcp loopback server in such cases
-func NewListener(log log.T, address string) (net.Listener, error) {
+func NewListener(address string) (net.Listener, error) {
 	if listener, err := net.Listen("unix", address); err != nil {
 		log.Infof("Failed to open unix socket listener, %v. Starting TCP listener.", err)
 		return net.Listen("tcp", "localhost:0")

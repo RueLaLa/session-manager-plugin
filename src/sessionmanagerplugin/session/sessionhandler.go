@@ -15,12 +15,10 @@
 package session
 
 import (
-	"fmt"
+	"context"
 	"math/rand"
-	"os"
 
-	sdkSession "github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/aws/session-manager-plugin/src/config"
 	"github.com/aws/session-manager-plugin/src/log"
 	"github.com/aws/session-manager-plugin/src/message"
@@ -29,7 +27,7 @@ import (
 )
 
 // OpenDataChannel initializes datachannel
-func (s *Session) OpenDataChannel(log log.T) (err error) {
+func (s *Session) OpenDataChannel() (err error) {
 	s.retryParams = retry.RepeatableExponentialRetryer{
 		GeometricRatio:      config.RetryBase,
 		InitialDelayInMilli: rand.Intn(config.DataChannelRetryInitialDelayMillis) + config.DataChannelRetryInitialDelayMillis,
@@ -37,33 +35,33 @@ func (s *Session) OpenDataChannel(log log.T) (err error) {
 		MaxAttempts:         config.DataChannelNumMaxRetries,
 	}
 
-	s.DataChannel.Initialize(log, s.ClientId, s.SessionId, s.TargetId, s.IsAwsCliUpgradeNeeded)
-	s.DataChannel.SetWebsocket(log, s.StreamUrl, s.TokenValue)
+	s.DataChannel.Initialize(s.ClientId, s.SessionId, s.TargetId, s.IsAwsCliUpgradeNeeded)
+	s.DataChannel.SetWebsocket(s.StreamUrl, s.TokenValue)
 	s.DataChannel.GetWsChannel().SetOnMessage(
 		func(input []byte) {
-			s.DataChannel.OutputMessageHandler(log, s.Stop, s.SessionId, input)
+			s.DataChannel.OutputMessageHandler(s.Stop, s.SessionId, input)
 		})
 	s.DataChannel.RegisterOutputStreamHandler(s.ProcessFirstMessage, false)
 
-	if err = s.DataChannel.Open(log); err != nil {
+	if err = s.DataChannel.Open(); err != nil {
 		log.Errorf("Retrying connection for data channel id: %s failed with error: %s", s.SessionId, err)
-		s.retryParams.CallableFunc = func() (err error) { return s.DataChannel.Reconnect(log) }
+		s.retryParams.CallableFunc = func() (err error) { return s.DataChannel.Reconnect() }
 		if err = s.retryParams.Call(); err != nil {
-			log.Error(err)
+			log.Error(err.Error())
 		}
 	}
 
 	s.DataChannel.GetWsChannel().SetOnError(
 		func(err error) {
 			log.Errorf("Trying to reconnect the session: %v with seq num: %d", s.StreamUrl, s.DataChannel.GetStreamDataSequenceNumber())
-			s.retryParams.CallableFunc = func() (err error) { return s.ResumeSessionHandler(log) }
+			s.retryParams.CallableFunc = func() (err error) { return s.ResumeSessionHandler() }
 			if err = s.retryParams.Call(); err != nil {
-				log.Error(err)
+				log.Error(err.Error())
 			}
 		})
 
 	// Scheduler for resending of data
-	s.DataChannel.ResendStreamDataMessageScheduler(log)
+	s.DataChannel.ResendStreamDataMessageScheduler()
 
 	return nil
 }
@@ -71,16 +69,16 @@ func (s *Session) OpenDataChannel(log log.T) (err error) {
 // ProcessFirstMessage only processes messages with PayloadType Output to determine the
 // sessionType of the session to be launched. This is a fallback for agent versions that do not support handshake, they
 // immediately start sending shell output.
-func (s *Session) ProcessFirstMessage(log log.T, outputMessage message.ClientMessage) (isHandlerReady bool, err error) {
+func (s *Session) ProcessFirstMessage(outputMessage message.ClientMessage) (isHandlerReady bool, err error) {
 	// Immediately deregister self so that this handler is only called once, for the first message
 	s.DataChannel.DeregisterOutputStreamHandler(s.ProcessFirstMessage)
 	// Only set session type if the session type has not already been set. Usually session type will be set
 	// by handshake protocol which would be the first message but older agents may not perform handshake
 	if s.SessionType == "" {
 		if outputMessage.PayloadType == uint32(message.Output) {
-			log.Warn("Setting session type to shell based on PayloadType!")
+			log.Info("Setting session type to shell based on PayloadType!")
 			s.DataChannel.SetSessionType(config.ShellPluginName)
-			s.DisplayMode.DisplayMessage(log, outputMessage)
+			s.DisplayMode.DisplayMessage(outputMessage)
 		}
 	}
 	return true, nil
@@ -90,24 +88,20 @@ func (s *Session) ProcessFirstMessage(log log.T, outputMessage message.ClientMes
 func (s *Session) Stop() {}
 
 // GetResumeSessionParams calls ResumeSession API and gets tokenvalue for reconnecting
-func (s *Session) GetResumeSessionParams(log log.T) (string, error) {
+func (s *Session) GetResumeSessionParams() (string, error) {
 	var (
 		resumeSessionOutput *ssm.ResumeSessionOutput
 		err                 error
-		sdkSession          *sdkSession.Session
 	)
 
-	if sdkSession, err = sdkutil.GetNewSessionWithEndpoint(s.Endpoint); err != nil {
-		return "", err
-	}
-	s.sdk = ssm.New(sdkSession)
+	s.sdk = ssm.NewFromConfig(sdkutil.GetSDKConfig())
 
 	resumeSessionInput := ssm.ResumeSessionInput{
 		SessionId: &s.SessionId,
 	}
 
 	log.Debugf("Resume Session input parameters: %v", resumeSessionInput)
-	if resumeSessionOutput, err = s.sdk.ResumeSession(&resumeSessionInput); err != nil {
+	if resumeSessionOutput, err = s.sdk.ResumeSession(context.TODO(), &resumeSessionInput); err != nil {
 		log.Errorf("Resume Session failed: %v", err)
 		return "", err
 	}
@@ -120,40 +114,34 @@ func (s *Session) GetResumeSessionParams(log log.T) (string, error) {
 }
 
 // ResumeSessionHandler gets token value and tries to Reconnect to datachannel
-func (s *Session) ResumeSessionHandler(log log.T) (err error) {
-	s.TokenValue, err = s.GetResumeSessionParams(log)
+func (s *Session) ResumeSessionHandler() (err error) {
+	s.TokenValue, err = s.GetResumeSessionParams()
 	if err != nil {
 		log.Errorf("Failed to get token: %v", err)
 		return
 	} else if s.TokenValue == "" {
 		log.Debugf("Session: %s timed out", s.SessionId)
-		fmt.Fprintf(os.Stdout, "Session: %s timed out.\n", s.SessionId)
 		return
 	}
 	s.DataChannel.GetWsChannel().SetChannelToken(s.TokenValue)
-	err = s.DataChannel.Reconnect(log)
+	err = s.DataChannel.Reconnect()
 	return
 }
 
 // TerminateSession calls TerminateSession API
-func (s *Session) TerminateSession(log log.T) error {
+func (s *Session) TerminateSession() error {
 	var (
-		err        error
-		newSession *sdkSession.Session
+		err error
 	)
 
-	if newSession, err = sdkutil.GetNewSessionWithEndpoint(s.Endpoint); err != nil {
-		log.Errorf("Terminate Session failed: %v", err)
-		return err
-	}
-	s.sdk = ssm.New(newSession)
+	s.sdk = ssm.NewFromConfig(sdkutil.GetSDKConfig())
 
 	terminateSessionInput := ssm.TerminateSessionInput{
 		SessionId: &s.SessionId,
 	}
 
 	log.Debugf("Terminate Session input parameters: %v", terminateSessionInput)
-	if _, err = s.sdk.TerminateSession(&terminateSessionInput); err != nil {
+	if _, err = s.sdk.TerminateSession(context.TODO(), &terminateSessionInput); err != nil {
 		log.Errorf("Terminate Session failed: %v", err)
 		return err
 	}

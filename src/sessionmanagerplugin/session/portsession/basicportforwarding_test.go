@@ -23,7 +23,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/session-manager-plugin/src/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -61,13 +60,13 @@ func TestSetSessionHandlers(t *testing.T) {
 	}()
 
 	go func() {
-		acceptConnection = func(log log.T, listener net.Listener) (tcpConn net.Conn, err error) {
+		acceptConnection := func(listener net.Listener) (tcpConn net.Conn, err error) {
 			return in, nil
 		}
 		signal.Notify(signalCh, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGTSTP)
 		process, _ := os.FindProcess(os.Getpid())
 		process.Signal(syscall.SIGINT)
-		portSession.SetSessionHandlers(mockLog)
+		portSession.SetSessionHandlers()
 	}()
 
 	time.Sleep(time.Second)
@@ -77,7 +76,7 @@ func TestSetSessionHandlers(t *testing.T) {
 }
 
 func TestStartSessionTCPLocalPortFromDocument(t *testing.T) {
-	acceptConnection = func(log log.T, listener net.Listener) (tcpConn net.Conn, err error) {
+	acceptConnection := func(listener net.Listener) (tcpConn net.Conn, err error) {
 		return nil, errors.New("accept failed")
 	}
 	portSession := PortSession{
@@ -88,13 +87,13 @@ func TestStartSessionTCPLocalPortFromDocument(t *testing.T) {
 			portParameters: PortParameters{PortNumber: "22", Type: "LocalPortForwarding"},
 		},
 	}
-	portSession.SetSessionHandlers(mockLog)
+	portSession.SetSessionHandlers()
 	assert.Equal(t, "54321", portSession.portParameters.LocalPortNumber)
 }
 
 func TestStartSessionTCPAcceptFailed(t *testing.T) {
 	connErr := errors.New("accept failed")
-	acceptConnection = func(log log.T, listener net.Listener) (tcpConn net.Conn, err error) {
+	acceptConnection := func(listener net.Listener) (tcpConn net.Conn, err error) {
 		return nil, connErr
 	}
 	portSession := PortSession{
@@ -105,7 +104,7 @@ func TestStartSessionTCPAcceptFailed(t *testing.T) {
 			portParameters: PortParameters{PortNumber: "22", Type: "LocalPortForwarding"},
 		},
 	}
-	assert.Equal(t, portSession.SetSessionHandlers(mockLog), connErr)
+	assert.Equal(t, portSession.SetSessionHandlers(), connErr)
 }
 
 func TestStartSessionTCPConnectFailed(t *testing.T) {

@@ -1,16 +1,3 @@
-// Copyright 2018 Amazon.com, Inc. or its affiliates. All Rights Reserved.
-//
-// Licensed under the Apache License, Version 2.0 (the "License"). You may not
-// use this file except in compliance with the License. A copy of the
-// License is located at
-//
-// http://aws.amazon.com/apache2.0/
-//
-// or in the "license" file accompanying this file. This file is distributed
-// on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-// either express or implied. See the License for the specific language governing
-// permissions and limitations under the License.
-
 // Package shellsession starts shell session.
 package shellsession
 
@@ -54,39 +41,39 @@ func (ShellSession) Name() string {
 	return config.ShellPluginName
 }
 
-func (s *ShellSession) Initialize(log log.T, sessionVar *session.Session) {
+func (s *ShellSession) Initialize(sessionVar *session.Session) {
 	s.Session = *sessionVar
 	s.DataChannel.RegisterOutputStreamHandler(s.ProcessStreamMessagePayload, true)
 	s.DataChannel.GetWsChannel().SetOnMessage(
 		func(input []byte) {
-			s.DataChannel.OutputMessageHandler(log, s.Stop, s.SessionId, input)
+			s.DataChannel.OutputMessageHandler(s.Stop, s.SessionId, input)
 		})
 }
 
 // StartSession takes input and write it to data channel
-func (s *ShellSession) SetSessionHandlers(log log.T) (err error) {
+func (s *ShellSession) SetSessionHandlers() (err error) {
 
 	// handle re-size
-	s.handleTerminalResize(log)
+	s.handleTerminalResize()
 
 	// handle control signals
-	s.handleControlSignals(log)
+	s.handleControlSignals()
 
 	//handles keyboard input
-	err = s.handleKeyboardInput(log)
+	err = s.handleKeyboardInput()
 
 	return
 }
 
 // handleControlSignals handles control signals when given by user
-func (s *ShellSession) handleControlSignals(log log.T) {
+func (s *ShellSession) handleControlSignals() {
 	go func() {
 		signals := make(chan os.Signal, 1)
 		signal.Notify(signals, sessionutil.ControlSignals...)
 		for {
 			sig := <-signals
 			if b, ok := sessionutil.SignalsByteMap[sig]; ok {
-				if err := s.DataChannel.SendInputDataMessage(log, message.Output, []byte{b}); err != nil {
+				if err := s.DataChannel.SendInputDataMessage(message.Output, []byte{b}); err != nil {
 					log.Errorf("Failed to send control signals: %v", err)
 				}
 			}
@@ -95,7 +82,7 @@ func (s *ShellSession) handleControlSignals(log log.T) {
 }
 
 // handleTerminalResize checks size of terminal every 500ms and sends size data.
-func (s *ShellSession) handleTerminalResize(log log.T) {
+func (s *ShellSession) handleTerminalResize() {
 	var (
 		width         int
 		height        int
@@ -122,7 +109,7 @@ func (s *ShellSession) handleTerminalResize(log log.T) {
 					log.Errorf("Cannot marshall size data: %v", err)
 				}
 				log.Debugf("Sending input size data: %s", inputSizeData)
-				if err = s.DataChannel.SendInputDataMessage(log, message.Size, inputSizeData); err != nil {
+				if err = s.DataChannel.SendInputDataMessage(message.Size, inputSizeData); err != nil {
 					log.Errorf("Failed to Send size data: %v", err)
 				}
 			}
@@ -133,7 +120,7 @@ func (s *ShellSession) handleTerminalResize(log log.T) {
 }
 
 // ProcessStreamMessagePayload prints payload received on datachannel to console
-func (s ShellSession) ProcessStreamMessagePayload(log log.T, outputMessage message.ClientMessage) (isHandlerReady bool, err error) {
-	s.DisplayMode.DisplayMessage(log, outputMessage)
+func (s ShellSession) ProcessStreamMessagePayload(outputMessage message.ClientMessage) (isHandlerReady bool, err error) {
+	s.DisplayMode.DisplayMessage(outputMessage)
 	return true, nil
 }

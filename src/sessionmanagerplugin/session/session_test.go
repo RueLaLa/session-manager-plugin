@@ -24,13 +24,11 @@ import (
 
 	wsChannelMock "github.com/aws/session-manager-plugin/src/communicator/mocks"
 	dataChannelMock "github.com/aws/session-manager-plugin/src/datachannel/mocks"
-	"github.com/aws/session-manager-plugin/src/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
 var (
-	logger          = log.NewMockLog()
 	mockDataChannel = &dataChannelMock.IDataChannel{}
 	mockWsChannel   = &wsChannelMock.IWebSocketChannel{}
 )
@@ -38,14 +36,14 @@ var (
 func TestValidateInputAndStartSessionWithNoInputArgument(t *testing.T) {
 	var buffer bytes.Buffer
 	args := []string{""}
-	ValidateInputAndStartSession(args, &buffer)
+	ValidateInputAndStartSession(args)
 	assert.Contains(t, buffer.String(), "The Session Manager plugin was installed successfully")
 }
 
 func TestValidateInputAndStartSessionWithWrongInputArgument(t *testing.T) {
 	var buffer bytes.Buffer
 	args := []string{1: "version"}
-	ValidateInputAndStartSession(args, &buffer)
+	ValidateInputAndStartSession(args)
 	assert.Contains(t, buffer.String(), "Use session-manager-plugin --version to check the version")
 }
 
@@ -55,10 +53,10 @@ func TestValidateInputAndStartSession(t *testing.T) {
 	args := []string{"session-manager-plugin",
 		sessionResponse,
 		"us-east-1", "StartSession", "", "{\"Target\": \"i-0123abc\"}", "https://ssm.us-east-1.amazonaws.com"}
-	startSession = func(session *Session, log log.T) error {
+	startSession = func(session *Session) error {
 		return fmt.Errorf("Some error")
 	}
-	ValidateInputAndStartSession(args, &buffer)
+	ValidateInputAndStartSession(args)
 	assert.Contains(t, buffer.String(), "Cannot perform start session: Some error")
 }
 
@@ -70,14 +68,14 @@ func TestValidateInputAndStartSessionWithEnvVariableParameter(t *testing.T) {
 		"AWS_SSM_START_SESSION_RESPONSE",
 		"us-east-1", "StartSession", "", "{\"Target\": \"i-0123abc\"}", "https://ssm.us-east-1.amazonaws.com"}
 	parameterPassed := false
-	startSession = func(session *Session, log log.T) error {
+	startSession = func(session *Session) error {
 		if session.TokenValue == "Session-Token" && session.SessionId == "user-012345" {
 			parameterPassed = true
 		}
 		return nil
 	}
 
-	ValidateInputAndStartSession(args, &buffer)
+	ValidateInputAndStartSession(args)
 	var _, envVariableExist = os.LookupEnv("AWS_SSM_START_SESSION_RESPONSE")
 	assert.False(t, envVariableExist)
 	assert.True(t, parameterPassed)
@@ -91,12 +89,12 @@ func TestValidateInputAndStartSessionWithWrongEnvVariableName(t *testing.T) {
 		"WRONG_ENV_NAME",
 		"us-east-1", "StartSession", "", "{\"Target\": \"i-0123abc\"}", "https://ssm.us-east-1.amazonaws.com"}
 	startSessionInvoked := false
-	startSession = func(session *Session, log log.T) error {
+	startSession = func(session *Session) error {
 		startSessionInvoked = true
 		return nil
 	}
 
-	ValidateInputAndStartSession(args, &buffer)
+	ValidateInputAndStartSession(args)
 	var _, envVariableExist = os.LookupEnv("WRONG_ENV_NAME")
 	assert.Contains(t, buffer.String(), "Cannot perform start session: invalid character 'W'")
 	assert.True(t, envVariableExist)
@@ -118,11 +116,11 @@ func TestExecute(t *testing.T) {
 	isStreamMessageResendTimeout := make(chan bool, 1)
 	mockDataChannel.On("IsStreamMessageResendTimeout").Return(isStreamMessageResendTimeout)
 
-	setSessionHandlersWithSessionType = func(session *Session, log log.T) error {
+	setSessionHandlersWithSessionType = func(session *Session) error {
 		return fmt.Errorf("start session error for %s", session.SessionType)
 	}
 
-	err := sessionMock.Execute(logger)
+	err := sessionMock.Execute()
 	assert.NotNil(t, err)
 	assert.Contains(t, err.Error(), "start session error for Standard_Stream")
 }
@@ -138,7 +136,7 @@ func TestExecuteAndStreamMessageResendTimesOut(t *testing.T) {
 
 	var wg sync.WaitGroup
 	wg.Add(1)
-	handleStreamMessageResendTimeout = func(session *Session, log log.T) {
+	handleStreamMessageResendTimeout = func(session *Session) {
 		time.Sleep(10 * time.Millisecond)
 		isStreamMessageResendTimeout <- true
 		wg.Done()
@@ -151,13 +149,13 @@ func TestExecuteAndStreamMessageResendTimesOut(t *testing.T) {
 	mockDataChannel.On("GetSessionType").Return("Standard_Stream")
 	mockDataChannel.On("GetSessionProperties").Return("SessionProperties")
 
-	setSessionHandlersWithSessionType = func(session *Session, log log.T) error {
+	setSessionHandlersWithSessionType = func(session *Session) error {
 		return nil
 	}
 
 	var err error
 	go func() {
-		err = sessionMock.Execute(logger)
+		err = sessionMock.Execute()
 		time.Sleep(200 * time.Millisecond)
 	}()
 	wg.Wait()

@@ -15,186 +15,78 @@
 package log
 
 import (
-	"sync"
-
-	"github.com/cihub/seelog"
+	"fmt"
+	logging "log"
+	"os"
 )
 
-const (
-	LogFileExtension     = ".log"
-	SeelogConfigFileName = "seelog.xml"
-	ErrorLogFileSuffix   = "errors"
-)
+const LOG_LEVEL = "WARN"
 
-var (
-	err                         error
-	DefaultSeelogConfigFilePath string // DefaultSeelogConfigFilePath specifies the default seelog location
-	DefaultLogDir               string // DefaultLogDir specifies default log location
-	ApplicationLogFile          string // ApplicationLogFile specifies name of application log file
-	ErrorLogFile                string // ErrorLogFile specifies name of error log file
-	loadedLogger                *T
-	lock                        sync.RWMutex
-)
+var LogLevels = map[string]int{
+	"TRACE":  1,
+	"DEBUG":  2,
+	"INFO":   3,
+	"WARN":   4,
+	"ERROR":  5,
+	"ALWAYS": 5,
+}
+var Log logging.Logger
 
-// pkgMutex is the lock used to serialize calls to the logger.
-var pkgMutex = new(sync.Mutex)
-
-// loggerInstance is the delegate logger in the wrapper
-var loggerInstance = &DelegateLogger{}
-
-// ContextFormatFilter is a filter that can add a context to the parameters of a log message.
-type ContextFormatFilter struct {
-	Context []string
+func init() {
+	Log = *logging.New(os.Stdout, "INFO: ", logging.Ldate|logging.Ltime)
 }
 
-type LogConfig struct {
-	ClientName string
-}
-
-// Filter adds the context at the beginning of the parameter slice.
-func (f ContextFormatFilter) Filter(params ...interface{}) (newParams []interface{}) {
-	newParams = make([]interface{}, len(f.Context)+len(params))
-	for i, param := range f.Context {
-		newParams[i] = param + " "
+func displayMessage(level, msg string) {
+	if LogLevels[level] >= LogLevels[LOG_LEVEL] {
+		Log.SetPrefix(fmt.Sprintf("%s: ", level))
+		Log.Println(msg)
 	}
-	ctxLen := len(f.Context)
-	for i, param := range params {
-		newParams[ctxLen+i] = param
-	}
-	return newParams
 }
 
-// Filterf adds the context in from of the format string.
-func (f ContextFormatFilter) Filterf(format string, params ...interface{}) (newFormat string, newParams []interface{}) {
-	newFormat = ""
-	for _, param := range f.Context {
-		newFormat += param + " "
-	}
-	newFormat += format
-	newParams = params
-	return
+func Trace(msg string) {
+	displayMessage("TRACE", msg)
 }
 
-// Logger is the starting point to initialize with client name.
-func Logger(useWatcher bool, clientName string) T {
-	logConfig := LogConfig{
-		ClientName: clientName,
-	}
-	if !isLoaded() {
-		logger := logConfig.InitLogger(useWatcher)
-		cache(logger)
-	}
-	return getCached()
+func Tracef(msg string, v ...any) {
+	Trace(fmt.Sprintf(msg, v...))
 }
 
-// initLogger initializes a new logger based on current configurations and starts file watcher on the configurations file
-func (config *LogConfig) InitLogger(useWatcher bool) (logger T) {
-	// Read the current configurations or get the default configurations
-	logConfigBytes := config.GetLogConfigBytes()
-	// Initialize the base seelog logger
-	baseLogger, _ := initBaseLoggerFromBytes(logConfigBytes)
-	// Create the wrapper logger
-	logger = withContext(baseLogger)
-	if useWatcher {
-		// Start the config file watcher
-		config.startWatcher(logger)
-	}
-	return
+func Debug(msg string) {
+	displayMessage("DEBUG", msg)
 }
 
-// check if a logger has be loaded
-func isLoaded() bool {
-	lock.RLock()
-	defer lock.RUnlock()
-	return loadedLogger != nil
+func Debugf(msg string, v ...any) {
+	Debug(fmt.Sprintf(msg, v...))
 }
 
-// cache the loaded logger
-func cache(logger T) {
-	lock.Lock()
-	defer lock.Unlock()
-	loadedLogger = &logger
+func Info(msg string) {
+	displayMessage("INFO", msg)
 }
 
-// return the cached logger
-func getCached() T {
-	lock.RLock()
-	defer lock.RUnlock()
-	return *loadedLogger
+func Infof(msg string, v ...any) {
+	Info(fmt.Sprintf(msg, v...))
 }
 
-// startWatcher starts the file watcher on the seelog configurations file path
-func (config *LogConfig) startWatcher(logger T) {
-	defer func() {
-		// In case the creation of watcher panics, let the current logger continue
-		if msg := recover(); msg != nil {
-			logger.Errorf("Seelog File Watcher Initilization Failed. Any updates on config file will be ignored unless agent is restarted: %v", msg)
-		}
-	}()
-	fileWatcher := &FileWatcher{}
-	fileWatcher.Init(logger, DefaultSeelogConfigFilePath, config.replaceLogger)
-	// Start the file watcher
-	fileWatcher.Start()
+func Warn(msg string) {
+	displayMessage("WARN", msg)
 }
 
-// ReplaceLogger replaces the current logger with a new logger initialized from the current configurations file
-func (config *LogConfig) replaceLogger() {
-
-	// Get the current logger
-	logger := getCached()
-
-	//Create new logger
-	logConfigBytes := config.GetLogConfigBytes()
-	baseLogger, err := initBaseLoggerFromBytes(logConfigBytes)
-
-	// If err in creating logger, do not replace logger
-	if err != nil {
-		logger.Error("New logger creation failed")
-		return
-	}
-
-	setStackDepth(baseLogger)
-	baseLogger.Debug("New Logger Successfully Created")
-
-	// Safe conversion to *Wrapper
-	wrapper, ok := logger.(*Wrapper)
-	if !ok {
-		logger.Errorf("Logger replace failed. The logger is not a wrapper")
-		return
-	}
-
-	// Replace the underlying base logger in wrapper
-	wrapper.ReplaceDelegate(baseLogger)
+func Warnf(msg string, v ...any) {
+	Warn(fmt.Sprintf(msg, v...))
 }
 
-func (config *LogConfig) GetLogConfigBytes() []byte {
-	return getLogConfigBytes(config.ClientName)
+func Error(msg string) {
+	displayMessage("ERROR", msg)
 }
 
-// initBaseLoggerFromBytes initializes the base logger using the specified configuration as bytes.
-func initBaseLoggerFromBytes(seelogConfig []byte) (seelogger seelog.LoggerInterface, err error) {
-	seelogger, err = seelog.LoggerFromConfigAsBytes(seelogConfig)
-	if err != nil {
-		// Create logger with default config
-		seelogger, _ = seelog.LoggerFromConfigAsBytes(DefaultConfig())
-	}
-	return
+func Errorf(msg string, v ...any) {
+	Error(fmt.Sprintf(msg, v...))
 }
 
-// withContext creates a wrapper logger on the base logger passed with context is passed
-func withContext(logger seelog.LoggerInterface, context ...string) (contextLogger T) {
-	loggerInstance.BaseLoggerInstance = logger
-	formatFilter := &ContextFormatFilter{Context: context}
-	contextLogger = &Wrapper{Format: formatFilter, M: pkgMutex, Delegate: loggerInstance}
-
-	setStackDepth(logger)
-	return contextLogger
+func Always(msg string) {
+	displayMessage("ALWAYS", msg)
 }
 
-// setStackDepth sets the stack depth of the logger passed
-func setStackDepth(logger seelog.LoggerInterface) {
-	// additional stack depth so that we print the calling function correctly
-	// stack depth 0 would print the function in the wrapper (e.g. wrapper.Debug)
-	// stack depth 1 prints the function calling the logger (wrapper), which is what we want.
-	logger.SetAdditionalStackDepth(1)
+func Alwaysf(msg string, v ...any) {
+	Always(fmt.Sprintf(msg, v...))
 }
