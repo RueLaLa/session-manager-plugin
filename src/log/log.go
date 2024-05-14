@@ -1,16 +1,3 @@
-// Copyright 2018 Amazon.com, Inc. or its affiliates. All Rights Reserved.
-//
-// Licensed under the Apache License, Version 2.0 (the "License"). You may not
-// use this file except in compliance with the License. A copy of the
-// License is located at
-//
-// http://aws.amazon.com/apache2.0/
-//
-// or in the "license" file accompanying this file. This file is distributed
-// on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-// either express or implied. See the License for the specific language governing
-// permissions and limitations under the License.
-
 // Package log is used to initialize the logger.
 package log
 
@@ -20,8 +7,7 @@ import (
 	"os"
 )
 
-const LOG_LEVEL = "WARN"
-
+var LOG_LEVEL = "WARN"
 var LogLevels = map[string]int{
 	"TRACE":  1,
 	"DEBUG":  2,
@@ -33,6 +19,11 @@ var LogLevels = map[string]int{
 var Log logging.Logger
 
 func init() {
+	env_level, env_present := os.LookupEnv("LOG_LEVEL")
+	if env_present {
+		fmt.Println(env_level)
+		LOG_LEVEL = env_level
+	}
 	Log = *logging.New(os.Stdout, "INFO: ", logging.Ldate|logging.Ltime)
 }
 
