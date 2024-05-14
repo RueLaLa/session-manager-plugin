@@ -21,7 +21,6 @@ var Log logging.Logger
 func init() {
 	env_level, env_present := os.LookupEnv("LOG_LEVEL")
 	if env_present {
-		fmt.Println(env_level)
 		LOG_LEVEL = env_level
 	}
 	Log = *logging.New(os.Stdout, "INFO: ", logging.Ldate|logging.Ltime)
@@ -30,7 +29,7 @@ func init() {
 func displayMessage(level, msg string) {
 	if LogLevels[level] >= LogLevels[LOG_LEVEL] {
 		Log.SetPrefix(fmt.Sprintf("%s: ", level))
-		Log.Println(msg)
+		Log.Printf("%s\n", msg)
 	}
 }
 
