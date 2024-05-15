@@ -4,7 +4,6 @@
 package mocks
 
 import (
-	log "github.com/aws/session-manager-plugin/src/log"
 	mock "github.com/stretchr/testify/mock"
 
 	time "time"
@@ -16,12 +15,12 @@ type IWebSocketChannel struct {
 }
 
 // Close provides a mock function with given fields: _a0
-func (_m *IWebSocketChannel) Close(_a0 log.T) error {
-	ret := _m.Called(_a0)
+func (_m *IWebSocketChannel) Close() error {
+	ret := _m.Called()
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(log.T) error); ok {
-		r0 = rf(_a0)
+	if rf, ok := ret.Get(0).(func() error); ok {
+		r0 = rf()
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -58,17 +57,17 @@ func (_m *IWebSocketChannel) GetStreamUrl() string {
 }
 
 // Initialize provides a mock function with given fields: _a0, channelUrl, channelToken
-func (_m *IWebSocketChannel) Initialize(_a0 log.T, channelUrl string, channelToken string) {
-	_m.Called(_a0, channelUrl, channelToken)
+func (_m *IWebSocketChannel) Initialize(channelUrl string, channelToken string) {
+	_m.Called(channelUrl, channelToken)
 }
 
 // Open provides a mock function with given fields: _a0
-func (_m *IWebSocketChannel) Open(_a0 log.T) error {
-	ret := _m.Called(_a0)
+func (_m *IWebSocketChannel) Open() error {
+	ret := _m.Called()
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(log.T) error); ok {
-		r0 = rf(_a0)
+	if rf, ok := ret.Get(0).(func() error); ok {
+		r0 = rf()
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -77,12 +76,12 @@ func (_m *IWebSocketChannel) Open(_a0 log.T) error {
 }
 
 // SendMessage provides a mock function with given fields: _a0, input, inputType
-func (_m *IWebSocketChannel) SendMessage(_a0 log.T, input []byte, inputType int) error {
-	ret := _m.Called(_a0, input, inputType)
+func (_m *IWebSocketChannel) SendMessage(input []byte, inputType int) error {
+	ret := _m.Called(input, inputType)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(log.T, []byte, int) error); ok {
-		r0 = rf(_a0, input, inputType)
+	if rf, ok := ret.Get(0).(func([]byte, int) error); ok {
+		r0 = rf(input, inputType)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -106,6 +105,6 @@ func (_m *IWebSocketChannel) SetOnMessage(onMessageHandler func([]byte)) {
 }
 
 // StartPings provides a mock function with given fields: _a0, pingInterval
-func (_m *IWebSocketChannel) StartPings(_a0 log.T, pingInterval time.Duration) {
-	_m.Called(_a0, pingInterval)
+func (_m *IWebSocketChannel) StartPings(pingInterval time.Duration) {
+	_m.Called(pingInterval)
 }

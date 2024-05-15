@@ -14,7 +14,9 @@
 // config package implement configuration retrieval for session manager apis
 package config
 
-import "time"
+import (
+	"time"
+)
 
 const (
 	RolePublishSubscribe               = "publish_subscribe"
@@ -44,8 +46,5 @@ const (
 	InteractiveCommandsPluginName    = "InteractiveCommands"
 	NonInteractiveCommandsPluginName = "NonInteractiveCommands"
 
-	//Agent Versions
-	TerminateSessionFlagSupportedAfterThisAgentVersion            = "2.3.722.0"
-	TCPMultiplexingSupportedAfterThisAgentVersion                 = "3.0.196.0"
-	TCPMultiplexingWithSmuxKeepAliveDisabledAfterThisAgentVersion = "3.1.1511.0"
+	MinSupportedAgentVersion = "3.1.1511.0"
 )

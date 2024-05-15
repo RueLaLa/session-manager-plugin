@@ -15,26 +15,44 @@
 package retry
 
 import (
+	"math"
 	"time"
-
-	"github.com/aws/session-manager-plugin/src/log"
 )
 
-const sleepConstant = 2
+type Retryer interface {
+	Call() error
+	NextSleepTime(int32) time.Duration
+}
 
-// Retry implements back off retry strategy for reconnect web socket connection.
-func Retry(log log.T, attempts int, sleep time.Duration, fn func() error) (err error) {
+type RepeatableExponentialRetryer struct {
+	CallableFunc        func() error
+	GeometricRatio      float64
+	InitialDelayInMilli int
+	MaxDelayInMilli     int
+	MaxAttempts         int
+}
 
-	log.Info("Retrying connection to channel")
-	for attempts > 0 {
-		attempts--
-		if err = fn(); err != nil {
-			time.Sleep(sleep)
-			sleep = sleep * sleepConstant
-			log.Debugf("%v attempts to connect web socket connection.", attempts)
-			continue
+// NextSleepTime calculates the next delay of retry.
+func (retryer *RepeatableExponentialRetryer) NextSleepTime(attempt int) time.Duration {
+	return time.Duration(float64(retryer.InitialDelayInMilli)*math.Pow(retryer.GeometricRatio, float64(attempt))) * time.Millisecond
+}
+
+// Call calls the operation and does exponential retry if error happens.
+func (retryer *RepeatableExponentialRetryer) Call() (err error) {
+	attempt := 0
+	failedAttemptsSoFar := 0
+	for {
+		err := retryer.CallableFunc()
+		if err == nil || failedAttemptsSoFar == retryer.MaxAttempts {
+			return err
 		}
-		return nil
+		sleep := retryer.NextSleepTime(attempt)
+		if int(sleep/time.Millisecond) > retryer.MaxDelayInMilli {
+			attempt = 0
+			sleep = retryer.NextSleepTime(attempt)
+		}
+		time.Sleep(sleep)
+		attempt++
+		failedAttemptsSoFar++
 	}
-	return err
 }

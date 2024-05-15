@@ -15,7 +15,6 @@
 package portsession
 
 import (
-	"fmt"
 	"io"
 	"os"
 	"os/signal"
@@ -29,7 +28,6 @@ import (
 )
 
 type StandardStreamForwarding struct {
-	port           IPortSession
 	inputStream    *os.File
 	outputStream   *os.File
 	portParameters PortParameters
@@ -45,24 +43,23 @@ func (p *StandardStreamForwarding) IsStreamNotSet() (status bool) {
 func (p *StandardStreamForwarding) Stop() {
 	p.inputStream.Close()
 	p.outputStream.Close()
-	return
 }
 
 // InitializeStreams initializes the streams with its file descriptors
-func (p *StandardStreamForwarding) InitializeStreams(log log.T, agentVersion string) (err error) {
-	p.handleControlSignals(log)
+func (p *StandardStreamForwarding) InitializeStreams(agentVersion string) (err error) {
+	p.handleControlSignals()
 	p.inputStream = os.Stdin
 	p.outputStream = os.Stdout
 	return
 }
 
 // handleControlSignals handles terminate signals
-func (p *StandardStreamForwarding) handleControlSignals(log log.T) {
+func (p *StandardStreamForwarding) handleControlSignals() {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, sessionutil.ControlSignals...)
 	go func() {
 		<-c
-		fmt.Println("Terminate signal received, exiting.")
+		log.Info("Terminate signal received, exiting.")
 
 		p.session.DataChannel.EndSession()
 		p.Stop()
@@ -70,16 +67,16 @@ func (p *StandardStreamForwarding) handleControlSignals(log log.T) {
 }
 
 // ReadStream reads data from the input stream
-func (p *StandardStreamForwarding) ReadStream(log log.T) (err error) {
+func (p *StandardStreamForwarding) ReadStream() (err error) {
 	msg := make([]byte, config.StreamDataPayloadSize)
 	for {
 		numBytes, err := p.inputStream.Read(msg)
 		if err != nil {
-			return p.handleReadError(log, err)
+			return p.handleReadError(err)
 		}
 
 		log.Tracef("Received message of size %d from stdin.", numBytes)
-		if err = p.session.DataChannel.SendInputDataMessage(log, message.Output, msg[:numBytes]); err != nil {
+		if err = p.session.DataChannel.SendInputDataMessage(message.Output, msg[:numBytes]); err != nil {
 			log.Errorf("Failed to send packet: %v", err)
 			return err
 		}
@@ -95,7 +92,7 @@ func (p *StandardStreamForwarding) WriteStream(outputMessage message.ClientMessa
 }
 
 // handleReadError handles read error
-func (p *StandardStreamForwarding) handleReadError(log log.T, err error) error {
+func (p *StandardStreamForwarding) handleReadError(err error) error {
 	if err == io.EOF {
 		log.Infof("Session to instance[%s] on port[%s] was closed.", p.session.TargetId, p.portParameters.PortNumber)
 		return nil

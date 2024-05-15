@@ -9,15 +9,13 @@
 // or in the "license" file accompanying this file. This file is distributed
 // on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
 // either express or implied. See the License for the specific language governing
-// permissions and limitations under the License.
+// permissions and limitations under the License
 
 // Package sessionutil provides utility for sessions.
 package sessionutil
 
-import "github.com/aws/session-manager-plugin/src/log"
-
-func NewDisplayMode(log log.T) DisplayMode {
+func NewDisplayMode() DisplayMode {
 	displayMode := DisplayMode{}
-	displayMode.InitDisplayMode(log)
+	displayMode.InitDisplayMode()
 	return displayMode
 }

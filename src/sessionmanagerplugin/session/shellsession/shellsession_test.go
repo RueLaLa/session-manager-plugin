@@ -101,12 +101,12 @@ func TestSendInputDataMessageWithPayloadTypeSize(t *testing.T) {
 	mockChannel := &mocks.IWebSocketChannel{}
 	dataChannel.SetWsChannel(mockChannel)
 	SendMessageCallCount := 0
-	datachannel.SendMessageCall = func(log log.T, dataChannel *datachannel.DataChannel, input []byte, inputType int) error {
+	datachannel.SendMessageCall = func(dataChannel *datachannel.DataChannel, input []byte, inputType int) error {
 		SendMessageCallCount++
 		return nil
 	}
 
-	err := dataChannel.SendInputDataMessage(logger, message.Size, sizeDataBytes)
+	err := dataChannel.SendInputDataMessage(message.Size, sizeDataBytes)
 	assert.Nil(t, err)
 	assert.Equal(t, expectedSequenceNumber, dataChannel.ExpectedSequenceNumber)
 	assert.Equal(t, 1, SendMessageCallCount)
@@ -143,30 +143,30 @@ func TestTerminalResizeWhenSessionSizeDataIsNotEqualToActualSize(t *testing.T) {
 	}()
 
 	SendMessageCallCount := 0
-	datachannel.SendMessageCall = func(log log.T, dataChannel *datachannel.DataChannel, input []byte, inputType int) error {
+	datachannel.SendMessageCall = func(dataChannel *datachannel.DataChannel, input []byte, inputType int) error {
 		SendMessageCallCount++
 		return nil
 	}
-	go shellSession.handleTerminalResize(logger)
+	go shellSession.handleTerminalResize()
 	wg.Wait()
 	assert.Equal(t, 1, SendMessageCallCount)
 }
 
 func TestProcessStreamMessagePayload(t *testing.T) {
 	shellSession := ShellSession{}
-	shellSession.DisplayMode = sessionutil.NewDisplayMode(logger)
+	shellSession.DisplayMode = sessionutil.NewDisplayMode()
 
 	msg := message.ClientMessage{
 		Payload: []byte("Hello Agent\n"),
 	}
-	isReady, err := shellSession.ProcessStreamMessagePayload(logger, msg)
+	isReady, err := shellSession.ProcessStreamMessagePayload(msg)
 	assert.True(t, isReady)
 	assert.Nil(t, err)
 }
 
 func getDataChannel() *datachannel.DataChannel {
 	dataChannel := &datachannel.DataChannel{}
-	dataChannel.Initialize(logger, clientId, sessionId, instanceId, false)
+	dataChannel.Initialize(clientId, sessionId, instanceId, false)
 	dataChannel.SetWsChannel(mockWsChannel)
 	return dataChannel
 }

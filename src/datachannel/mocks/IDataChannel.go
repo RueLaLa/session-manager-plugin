@@ -8,7 +8,6 @@ import (
 
 	communicator "github.com/aws/session-manager-plugin/src/communicator"
 	datachannel "github.com/aws/session-manager-plugin/src/datachannel"
-	log "github.com/aws/session-manager-plugin/src/log"
 	message "github.com/aws/session-manager-plugin/src/message"
 	mock "github.com/stretchr/testify/mock"
 )
@@ -29,17 +28,17 @@ func (_m *IDataChannel) AddDataToOutgoingMessageBuffer(streamMessage datachannel
 }
 
 // CalculateRetransmissionTimeout provides a mock function with given fields: _a0, streamingMessage
-func (_m *IDataChannel) CalculateRetransmissionTimeout(_a0 log.T, streamingMessage datachannel.StreamingMessage) {
-	_m.Called(_a0, streamingMessage)
+func (_m *IDataChannel) CalculateRetransmissionTimeout(streamingMessage datachannel.StreamingMessage) {
+	_m.Called(streamingMessage)
 }
 
 // Close provides a mock function with given fields: _a0
-func (_m *IDataChannel) Close(_a0 log.T) error {
-	ret := _m.Called(_a0)
+func (_m *IDataChannel) Close() error {
+	ret := _m.Called()
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(log.T) error); ok {
-		r0 = rf(_a0)
+	if rf, ok := ret.Get(0).(func() error); ok {
+		r0 = rf()
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -53,12 +52,12 @@ func (_m *IDataChannel) DeregisterOutputStreamHandler(handler datachannel.Output
 }
 
 // FinalizeDataChannelHandshake provides a mock function with given fields: _a0, tokenValue
-func (_m *IDataChannel) FinalizeDataChannelHandshake(_a0 log.T, tokenValue string) error {
-	ret := _m.Called(_a0, tokenValue)
+func (_m *IDataChannel) FinalizeDataChannelHandshake(tokenValue string) error {
+	ret := _m.Called(tokenValue)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(log.T, string) error); ok {
-		r0 = rf(_a0, tokenValue)
+	if rf, ok := ret.Get(0).(func(string) error); ok {
+		r0 = rf(tokenValue)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -141,8 +140,8 @@ func (_m *IDataChannel) GetWsChannel() communicator.IWebSocketChannel {
 }
 
 // Initialize provides a mock function with given fields: _a0, clientId, sessionId, targetId, isAwsCliUpgradeNeeded
-func (_m *IDataChannel) Initialize(_a0 log.T, clientId string, sessionId string, targetId string, isAwsCliUpgradeNeeded bool) {
-	_m.Called(_a0, clientId, sessionId, targetId, isAwsCliUpgradeNeeded)
+func (_m *IDataChannel) Initialize(clientId string, sessionId string, targetId string, isAwsCliUpgradeNeeded bool) {
+	_m.Called(clientId, sessionId, targetId, isAwsCliUpgradeNeeded)
 }
 
 // IsSessionTypeSet provides a mock function with given fields:
@@ -178,12 +177,12 @@ func (_m *IDataChannel) IsStreamMessageResendTimeout() chan bool {
 }
 
 // Open provides a mock function with given fields: _a0
-func (_m *IDataChannel) Open(_a0 log.T) error {
-	ret := _m.Called(_a0)
+func (_m *IDataChannel) Open() error {
+	ret := _m.Called()
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(log.T) error); ok {
-		r0 = rf(_a0)
+	if rf, ok := ret.Get(0).(func() error); ok {
+		r0 = rf()
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -192,12 +191,12 @@ func (_m *IDataChannel) Open(_a0 log.T) error {
 }
 
 // OutputMessageHandler provides a mock function with given fields: _a0, stopHandler, sessionID, rawMessage
-func (_m *IDataChannel) OutputMessageHandler(_a0 log.T, stopHandler datachannel.Stop, sessionID string, rawMessage []byte) error {
-	ret := _m.Called(_a0, stopHandler, sessionID, rawMessage)
+func (_m *IDataChannel) OutputMessageHandler(stopHandler datachannel.Stop, sessionID string, rawMessage []byte) error {
+	ret := _m.Called(stopHandler, sessionID, rawMessage)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(log.T, datachannel.Stop, string, []byte) error); ok {
-		r0 = rf(_a0, stopHandler, sessionID, rawMessage)
+	if rf, ok := ret.Get(0).(func(datachannel.Stop, string, []byte) error); ok {
+		r0 = rf(stopHandler, sessionID, rawMessage)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -206,12 +205,12 @@ func (_m *IDataChannel) OutputMessageHandler(_a0 log.T, stopHandler datachannel.
 }
 
 // ProcessAcknowledgedMessage provides a mock function with given fields: _a0, acknowledgeMessageContent
-func (_m *IDataChannel) ProcessAcknowledgedMessage(_a0 log.T, acknowledgeMessageContent message.AcknowledgeContent) error {
-	ret := _m.Called(_a0, acknowledgeMessageContent)
+func (_m *IDataChannel) ProcessAcknowledgedMessage(acknowledgeMessageContent message.AcknowledgeContent) error {
+	ret := _m.Called(acknowledgeMessageContent)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(log.T, message.AcknowledgeContent) error); ok {
-		r0 = rf(_a0, acknowledgeMessageContent)
+	if rf, ok := ret.Get(0).(func(message.AcknowledgeContent) error); ok {
+		r0 = rf(acknowledgeMessageContent)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -220,12 +219,12 @@ func (_m *IDataChannel) ProcessAcknowledgedMessage(_a0 log.T, acknowledgeMessage
 }
 
 // Reconnect provides a mock function with given fields: _a0
-func (_m *IDataChannel) Reconnect(_a0 log.T) error {
-	ret := _m.Called(_a0)
+func (_m *IDataChannel) Reconnect() error {
+	ret := _m.Called()
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(log.T) error); ok {
-		r0 = rf(_a0)
+	if rf, ok := ret.Get(0).(func() error); ok {
+		r0 = rf()
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -249,12 +248,12 @@ func (_m *IDataChannel) RemoveDataFromOutgoingMessageBuffer(streamMessageElement
 }
 
 // ResendStreamDataMessageScheduler provides a mock function with given fields: _a0
-func (_m *IDataChannel) ResendStreamDataMessageScheduler(_a0 log.T) error {
-	ret := _m.Called(_a0)
+func (_m *IDataChannel) ResendStreamDataMessageScheduler() error {
+	ret := _m.Called()
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(log.T) error); ok {
-		r0 = rf(_a0)
+	if rf, ok := ret.Get(0).(func() error); ok {
+		r0 = rf()
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -263,12 +262,12 @@ func (_m *IDataChannel) ResendStreamDataMessageScheduler(_a0 log.T) error {
 }
 
 // SendAcknowledgeMessage provides a mock function with given fields: _a0, clientMessage
-func (_m *IDataChannel) SendAcknowledgeMessage(_a0 log.T, clientMessage message.ClientMessage) error {
-	ret := _m.Called(_a0, clientMessage)
+func (_m *IDataChannel) SendAcknowledgeMessage(clientMessage message.ClientMessage) error {
+	ret := _m.Called(clientMessage)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(log.T, message.ClientMessage) error); ok {
-		r0 = rf(_a0, clientMessage)
+	if rf, ok := ret.Get(0).(func(message.ClientMessage) error); ok {
+		r0 = rf(clientMessage)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -277,12 +276,12 @@ func (_m *IDataChannel) SendAcknowledgeMessage(_a0 log.T, clientMessage message.
 }
 
 // SendFlag provides a mock function with given fields: _a0, flagType
-func (_m *IDataChannel) SendFlag(_a0 log.T, flagType message.PayloadTypeFlag) error {
-	ret := _m.Called(_a0, flagType)
+func (_m *IDataChannel) SendFlag(flagType message.PayloadTypeFlag) error {
+	ret := _m.Called(flagType)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(log.T, message.PayloadTypeFlag) error); ok {
-		r0 = rf(_a0, flagType)
+	if rf, ok := ret.Get(0).(func(message.PayloadTypeFlag) error); ok {
+		r0 = rf(flagType)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -291,12 +290,12 @@ func (_m *IDataChannel) SendFlag(_a0 log.T, flagType message.PayloadTypeFlag) er
 }
 
 // SendInputDataMessage provides a mock function with given fields: _a0, payloadType, inputData
-func (_m *IDataChannel) SendInputDataMessage(_a0 log.T, payloadType message.PayloadType, inputData []byte) error {
-	ret := _m.Called(_a0, payloadType, inputData)
+func (_m *IDataChannel) SendInputDataMessage(payloadType message.PayloadType, inputData []byte) error {
+	ret := _m.Called(payloadType, inputData)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(log.T, message.PayloadType, []byte) error); ok {
-		r0 = rf(_a0, payloadType, inputData)
+	if rf, ok := ret.Get(0).(func(message.PayloadType, []byte) error); ok {
+		r0 = rf(payloadType, inputData)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -305,12 +304,12 @@ func (_m *IDataChannel) SendInputDataMessage(_a0 log.T, payloadType message.Payl
 }
 
 // SendMessage provides a mock function with given fields: _a0, input, inputType
-func (_m *IDataChannel) SendMessage(_a0 log.T, input []byte, inputType int) error {
-	ret := _m.Called(_a0, input, inputType)
+func (_m *IDataChannel) SendMessage(input []byte, inputType int) error {
+	ret := _m.Called(input, inputType)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(log.T, []byte, int) error); ok {
-		r0 = rf(_a0, input, inputType)
+	if rf, ok := ret.Get(0).(func([]byte, int) error); ok {
+		r0 = rf(input, inputType)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -329,8 +328,8 @@ func (_m *IDataChannel) SetSessionType(sessionType string) {
 }
 
 // SetWebsocket provides a mock function with given fields: _a0, streamUrl, tokenValue
-func (_m *IDataChannel) SetWebsocket(_a0 log.T, streamUrl string, tokenValue string) {
-	_m.Called(_a0, streamUrl, tokenValue)
+func (_m *IDataChannel) SetWebsocket(streamUrl string, tokenValue string) {
+	_m.Called(streamUrl, tokenValue)
 }
 
 // SetWsChannel provides a mock function with given fields: wsChannel

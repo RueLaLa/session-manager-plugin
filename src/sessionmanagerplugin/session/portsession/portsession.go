@@ -20,7 +20,6 @@ import (
 	"github.com/aws/session-manager-plugin/src/log"
 	"github.com/aws/session-manager-plugin/src/message"
 	"github.com/aws/session-manager-plugin/src/sessionmanagerplugin/session"
-	"github.com/aws/session-manager-plugin/src/version"
 )
 
 const (
@@ -35,8 +34,8 @@ type PortSession struct {
 
 type IPortSession interface {
 	IsStreamNotSet() (status bool)
-	InitializeStreams(log log.T, agentVersion string) (err error)
-	ReadStream(log log.T) (err error)
+	InitializeStreams(agentVersion string) (err error)
+	ReadStream() (err error)
 	WriteStream(outputMessage message.ClientMessage) (err error)
 	Stop()
 }
@@ -58,25 +57,17 @@ func (PortSession) Name() string {
 	return config.PortPluginName
 }
 
-func (s *PortSession) Initialize(log log.T, sessionVar *session.Session) {
+func (s *PortSession) Initialize(sessionVar *session.Session) {
 	s.Session = *sessionVar
 	if err := jsonutil.Remarshal(s.SessionProperties, &s.portParameters); err != nil {
 		log.Errorf("Invalid format: %v", err)
 	}
 
 	if s.portParameters.Type == LocalPortForwardingType {
-		if version.DoesAgentSupportTCPMultiplexing(log, s.DataChannel.GetAgentVersion()) {
-			s.portSessionType = &MuxPortForwarding{
-				sessionId:      s.SessionId,
-				portParameters: s.portParameters,
-				session:        s.Session,
-			}
-		} else {
-			s.portSessionType = &BasicPortForwarding{
-				sessionId:      s.SessionId,
-				portParameters: s.portParameters,
-				session:        s.Session,
-			}
+		s.portSessionType = &MuxPortForwarding{
+			sessionId:      s.SessionId,
+			portParameters: s.portParameters,
+			session:        s.Session,
 		}
 	} else {
 		s.portSessionType = &StandardStreamForwarding{
@@ -89,7 +80,7 @@ func (s *PortSession) Initialize(log log.T, sessionVar *session.Session) {
 	s.DataChannel.GetWsChannel().SetOnMessage(func(input []byte) {
 		if s.portSessionType.IsStreamNotSet() {
 			outputMessage := &message.ClientMessage{}
-			if err := outputMessage.DeserializeClientMessage(log, input); err != nil {
+			if err := outputMessage.DeserializeClientMessage(input); err != nil {
 				log.Debugf("Ignore message deserialize error while stream connection had not set.")
 				return
 			}
@@ -100,7 +91,7 @@ func (s *PortSession) Initialize(log log.T, sessionVar *session.Session) {
 				log.Infof("Received %s message while establishing connection", outputMessage.MessageType)
 			}
 		}
-		s.DataChannel.OutputMessageHandler(log, s.Stop, s.SessionId, input)
+		s.DataChannel.OutputMessageHandler(s.Stop, s.SessionId, input)
 	})
 	log.Infof("Connected to instance[%s] on port: %s", sessionVar.TargetId, s.portParameters.PortNumber)
 }
@@ -110,19 +101,19 @@ func (s *PortSession) Stop() {
 }
 
 // StartSession redirects inputStream/outputStream data to datachannel.
-func (s *PortSession) SetSessionHandlers(log log.T) (err error) {
-	if err = s.portSessionType.InitializeStreams(log, s.DataChannel.GetAgentVersion()); err != nil {
+func (s *PortSession) SetSessionHandlers() (err error) {
+	if err = s.portSessionType.InitializeStreams(s.DataChannel.GetAgentVersion()); err != nil {
 		return err
 	}
 
-	if err = s.portSessionType.ReadStream(log); err != nil {
+	if err = s.portSessionType.ReadStream(); err != nil {
 		return err
 	}
 	return
 }
 
 // ProcessStreamMessagePayload writes messages received on datachannel to stdout
-func (s *PortSession) ProcessStreamMessagePayload(log log.T, outputMessage message.ClientMessage) (isHandlerReady bool, err error) {
+func (s *PortSession) ProcessStreamMessagePayload(outputMessage message.ClientMessage) (isHandlerReady bool, err error) {
 	if s.portSessionType.IsStreamNotSet() {
 		log.Debugf("Waiting for streams to be established before processing incoming messages.")
 		return false, nil

@@ -33,7 +33,7 @@ func (s *ShellSession) Stop() {
 }
 
 // handleKeyboardInput handles input entered by customer on terminal
-func (s *ShellSession) handleKeyboardInput(log log.T) (err error) {
+func (s *ShellSession) handleKeyboardInput() (err error) {
 	var (
 		stdinBytesLen int
 	)
@@ -61,7 +61,7 @@ func (s *ShellSession) handleKeyboardInput(log log.T) (err error) {
 				return
 			}
 		case stdinBytes := <-ch:
-			if err = s.Session.DataChannel.SendInputDataMessage(log, message.Output, stdinBytes[:stdinBytesLen]); err != nil {
+			if err = s.Session.DataChannel.SendInputDataMessage(message.Output, stdinBytes[:stdinBytesLen]); err != nil {
 				return
 			}
 		}

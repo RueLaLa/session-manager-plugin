@@ -22,7 +22,6 @@ import (
 
 	"github.com/aws/session-manager-plugin/src/datachannel"
 	"github.com/aws/session-manager-plugin/src/jsonutil"
-	"github.com/aws/session-manager-plugin/src/log"
 	"github.com/aws/session-manager-plugin/src/message"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -38,7 +37,7 @@ func TestInitializePortSession(t *testing.T) {
 	portSession := PortSession{
 		Session: getSessionMock(),
 	}
-	portSession.Initialize(mockLog, &portSession.Session)
+	portSession.Initialize(&portSession.Session)
 
 	mockWebSocketChannel.AssertExpectations(t)
 	assert.Equal(t, portParameters, portSession.portParameters, "Initialize port parameters")
@@ -54,7 +53,7 @@ func TestInitializePortSessionForPortForwardingWithOldAgent(t *testing.T) {
 	portSession := PortSession{
 		Session: getSessionMockWithParams(portParameters, "2.2.0.0"),
 	}
-	portSession.Initialize(mockLog, &portSession.Session)
+	portSession.Initialize(&portSession.Session)
 
 	mockWebSocketChannel.AssertExpectations(t)
 	assert.Equal(t, portParameters, portSession.portParameters, "Initialize port parameters")
@@ -70,7 +69,7 @@ func TestInitializePortSessionForPortForwarding(t *testing.T) {
 	portSession := PortSession{
 		Session: getSessionMockWithParams(portParameters, "3.1.0.0"),
 	}
-	portSession.Initialize(mockLog, &portSession.Session)
+	portSession.Initialize(&portSession.Session)
 
 	mockWebSocketChannel.AssertExpectations(t)
 	assert.Equal(t, portParameters, portSession.portParameters, "Initialize port parameters")
@@ -84,7 +83,7 @@ func TestStartSessionWithClosedWsConn(t *testing.T) {
 	os.Stdin = in
 
 	var actualPayload []byte
-	datachannel.SendMessageCall = func(log log.T, dataChannel *datachannel.DataChannel, input []byte, inputType int) error {
+	datachannel.SendMessageCall = func(dataChannel *datachannel.DataChannel, input []byte, inputType int) error {
 		actualPayload = input
 		return nil
 	}
@@ -107,9 +106,9 @@ func TestStartSessionWithClosedWsConn(t *testing.T) {
 			session:      getSessionMock(),
 		},
 	}
-	portSession.SetSessionHandlers(mockLog)
+	portSession.SetSessionHandlers()
 	deserializedMsg := &message.ClientMessage{}
-	err := deserializedMsg.DeserializeClientMessage(mockLog, actualPayload)
+	err := deserializedMsg.DeserializeClientMessage(actualPayload)
 	assert.Nil(t, err)
 	assert.Equal(t, outputMessage.Payload, deserializedMsg.Payload)
 }
@@ -131,7 +130,7 @@ func TestProcessStreamMessagePayload(t *testing.T) {
 				outputStream: out,
 			},
 		}
-		portSession.ProcessStreamMessagePayload(mockLog, outputMessage)
+		portSession.ProcessStreamMessagePayload(outputMessage)
 		out.Close()
 	}()
 

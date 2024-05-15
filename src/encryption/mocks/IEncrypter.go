@@ -5,7 +5,6 @@
 package mocks
 
 import (
-	log "github.com/aws/session-manager-plugin/src/log"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -15,12 +14,12 @@ type IEncrypter struct {
 }
 
 // Decrypt provides a mock function with given fields: _a0, cipherText
-func (_m *IEncrypter) Decrypt(_a0 log.T, cipherText []byte) ([]byte, error) {
-	ret := _m.Called(_a0, cipherText)
+func (_m *IEncrypter) Decrypt(cipherText []byte) ([]byte, error) {
+	ret := _m.Called(cipherText)
 
 	var r0 []byte
-	if rf, ok := ret.Get(0).(func(log.T, []byte) []byte); ok {
-		r0 = rf(_a0, cipherText)
+	if rf, ok := ret.Get(0).(func([]byte) []byte); ok {
+		r0 = rf(cipherText)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]byte)
@@ -28,8 +27,8 @@ func (_m *IEncrypter) Decrypt(_a0 log.T, cipherText []byte) ([]byte, error) {
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(log.T, []byte) error); ok {
-		r1 = rf(_a0, cipherText)
+	if rf, ok := ret.Get(1).(func([]byte) error); ok {
+		r1 = rf(cipherText)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -38,12 +37,12 @@ func (_m *IEncrypter) Decrypt(_a0 log.T, cipherText []byte) ([]byte, error) {
 }
 
 // Encrypt provides a mock function with given fields: _a0, plainText
-func (_m *IEncrypter) Encrypt(_a0 log.T, plainText []byte) ([]byte, error) {
-	ret := _m.Called(_a0, plainText)
+func (_m *IEncrypter) Encrypt(plainText []byte) ([]byte, error) {
+	ret := _m.Called(plainText)
 
 	var r0 []byte
-	if rf, ok := ret.Get(0).(func(log.T, []byte) []byte); ok {
-		r0 = rf(_a0, plainText)
+	if rf, ok := ret.Get(0).(func([]byte) []byte); ok {
+		r0 = rf(plainText)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]byte)
@@ -51,8 +50,8 @@ func (_m *IEncrypter) Encrypt(_a0 log.T, plainText []byte) ([]byte, error) {
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(log.T, []byte) error); ok {
-		r1 = rf(_a0, plainText)
+	if rf, ok := ret.Get(1).(func([]byte) error); ok {
+		r1 = rf(plainText)
 	} else {
 		r1 = ret.Error(1)
 	}

@@ -58,7 +58,7 @@ func (s *ShellSession) Stop() {
 }
 
 // handleKeyboardInput handles input entered by customer on terminal
-func (s *ShellSession) handleKeyboardInput(log log.T) (err error) {
+func (s *ShellSession) handleKeyboardInput() (err error) {
 	var (
 		character rune         //character input from keyboard
 		key       keyboard.Key //special keys like arrows and function keys
@@ -87,13 +87,13 @@ func (s *ShellSession) handleKeyboardInput(log log.T) (err error) {
 	for {
 		select {
 		case <-time.After(time.Second):
-			if s.Session.DataChannel.IsSessionEnded() == true {
+			if s.Session.DataChannel.IsSessionEnded() {
 				s.Stop()
 				return
 			}
 		case charStr := <-charCH:
 			charBytes := []byte(string(charStr))
-			if err = s.Session.DataChannel.SendInputDataMessage(log, message.Output, charBytes); err != nil {
+			if err = s.Session.DataChannel.SendInputDataMessage(message.Output, charBytes); err != nil {
 				log.Errorf("Failed to send UTF8 char: %v", err)
 				return
 			}
@@ -102,11 +102,10 @@ func (s *ShellSession) handleKeyboardInput(log log.T) (err error) {
 			if byteValue, ok := specialKeysInputMap[key]; ok {
 				keyBytes = byteValue
 			}
-			if err = s.Session.DataChannel.SendInputDataMessage(log, message.Output, keyBytes); err != nil {
+			if err = s.Session.DataChannel.SendInputDataMessage(message.Output, keyBytes); err != nil {
 				log.Errorf("Failed to send UTF8 char: %v", err)
 				return
 			}
 		}
 	}
-	return
 }

@@ -15,51 +15,34 @@
 package sdkutil
 
 import (
-	"fmt"
-	"time"
+	"context"
+	"os"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/session-manager-plugin/src/sdkutil/retryer"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
 )
 
-var defaultRegion string
 var defaultProfile string
 
-// GetNewSessionWithEndpoint creates aws sdk session with given profile, region and endpoint
-func GetNewSessionWithEndpoint(endpoint string) (sess *session.Session, err error) {
-	if sess, err = session.NewSessionWithOptions(session.Options{
-		Config: aws.Config{
-			Retryer:    newRetryer(),
-			SleepDelay: sleepDelay,
-			Region:     aws.String(defaultRegion),
-			Endpoint:   aws.String(endpoint),
-		},
-		SharedConfigState: session.SharedConfigEnable,
-		Profile:           defaultProfile,
-	}); err != nil {
-		return nil, fmt.Errorf("Error creating new aws sdk session %s", err)
+func GetSDKConfig() aws.Config {
+	scp, _ := config.LoadSharedConfigProfile(context.TODO(), defaultProfile)
+	env_region, env_present := os.LookupEnv("AWS_REGION")
+
+	if env_present {
+		scp.Region = env_region
+	} else if scp.Region == "" {
+		scp.Region = "us-east-1"
 	}
-	return sess, nil
+
+	cfg, _ := config.LoadDefaultConfig(
+		context.TODO(),
+		config.WithSharedConfigProfile(defaultProfile),
+		config.WithDefaultRegion(scp.Region),
+	)
+
+	return cfg
 }
 
-// GetDefaultSession creates aws sdk session with given profile and region
-func GetDefaultSession() (sess *session.Session, err error) {
-	return GetNewSessionWithEndpoint("")
-}
-
-// Sets the region and profile for default aws sessions
-func SetRegionAndProfile(region string, profile string) {
-	defaultRegion = region
+func SetProfile(profile string) {
 	defaultProfile = profile
-}
-
-var newRetryer = func() aws.RequestRetryer {
-	r := retryer.SsmCliRetryer{}
-	r.NumMaxRetries = 3
-	return r
-}
-
-var sleepDelay = func(d time.Duration) {
-	time.Sleep(d)
 }
