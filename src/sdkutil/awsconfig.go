@@ -16,6 +16,7 @@ package sdkutil
 
 import (
 	"context"
+	"os"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -25,8 +26,11 @@ var defaultProfile string
 
 func GetSDKConfig() aws.Config {
 	scp, _ := config.LoadSharedConfigProfile(context.TODO(), defaultProfile)
+	env_region, env_present := os.LookupEnv("AWS_REGION")
 
-	if scp.Region == "" {
+	if env_present {
+		scp.Region = env_region
+	} else if scp.Region == "" {
 		scp.Region = "us-east-1"
 	}
 
