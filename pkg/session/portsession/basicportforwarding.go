@@ -22,11 +22,11 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/aws/session-manager-plugin/src/config"
-	"github.com/aws/session-manager-plugin/src/log"
-	"github.com/aws/session-manager-plugin/src/message"
-	"github.com/aws/session-manager-plugin/src/sessionmanagerplugin/session"
-	"github.com/aws/session-manager-plugin/src/sessionmanagerplugin/session/sessionutil"
+	"github.com/aws/session-manager-plugin/pkg/config"
+	"github.com/aws/session-manager-plugin/pkg/log"
+	"github.com/aws/session-manager-plugin/pkg/message"
+	"github.com/aws/session-manager-plugin/pkg/session"
+	"github.com/aws/session-manager-plugin/pkg/session/sessionutil"
 )
 
 // BasicPortForwarding is type of port session
