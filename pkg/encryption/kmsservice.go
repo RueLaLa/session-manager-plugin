@@ -18,7 +18,7 @@ import (
 	"fmt"
 
 	"github.com/aws/aws-sdk-go-v2/service/kms"
-	"github.com/aws/session-manager-plugin/src/sdkutil"
+	"github.com/aws/session-manager-plugin/pkg/sdkutil"
 )
 
 // KMSKeySizeInBytes is the key size that is fetched from KMS. 64 bytes key is split into two halves.

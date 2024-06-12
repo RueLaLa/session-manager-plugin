@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/aws/session-manager-plugin/src/log"
+	"github.com/aws/session-manager-plugin/pkg/log"
 )
 
 const (

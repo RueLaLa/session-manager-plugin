@@ -20,15 +20,15 @@ import (
 	"io"
 	"time"
 
-	"github.com/aws/session-manager-plugin/src/config"
-	"github.com/aws/session-manager-plugin/src/retry"
+	"github.com/aws/session-manager-plugin/pkg/config"
+	"github.com/aws/session-manager-plugin/pkg/retry"
 
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
-	"github.com/aws/session-manager-plugin/src/datachannel"
-	"github.com/aws/session-manager-plugin/src/log"
-	"github.com/aws/session-manager-plugin/src/message"
-	"github.com/aws/session-manager-plugin/src/sdkutil"
-	"github.com/aws/session-manager-plugin/src/sessionmanagerplugin/session/sessionutil"
+	"github.com/aws/session-manager-plugin/pkg/datachannel"
+	"github.com/aws/session-manager-plugin/pkg/log"
+	"github.com/aws/session-manager-plugin/pkg/message"
+	"github.com/aws/session-manager-plugin/pkg/sdkutil"
+	"github.com/aws/session-manager-plugin/pkg/session/sessionutil"
 	"github.com/twinj/uuid"
 )
 
