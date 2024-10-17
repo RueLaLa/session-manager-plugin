@@ -211,6 +211,7 @@ func (dataChannel *DataChannel) FinalizeDataChannelHandshake(tokenValue string) 
 		RequestId:            aws.String(uid),
 		TokenValue:           aws.String(tokenValue),
 		ClientId:             aws.String(dataChannel.ClientId),
+		ClientVersion:        aws.String(version.Version),
 	}
 
 	var openDataChannelInputBytes []byte
