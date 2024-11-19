@@ -23,6 +23,7 @@ import (
 	"github.com/aws/session-manager-plugin/pkg/config"
 	"github.com/aws/session-manager-plugin/pkg/retry"
 
+	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/aws/session-manager-plugin/pkg/datachannel"
 	"github.com/aws/session-manager-plugin/pkg/log"
@@ -80,6 +81,8 @@ type Session struct {
 	SessionType           string
 	SessionProperties     interface{}
 	DisplayMode           sessionutil.DisplayMode
+	Region                string
+	Signer                *v4.Signer
 }
 
 // startSession create the datachannel for session
@@ -139,6 +142,7 @@ func ValidateInputAndStartSession(response, profile, ssmEndpoint, parameters str
 	session.Endpoint = ssmEndpoint
 	session.ClientId = clientId
 	session.TargetId = target
+	session.Region = sdkutil.GetRegion()
 	session.DataChannel = &datachannel.DataChannel{}
 
 	if err = startSession(&session); err != nil {

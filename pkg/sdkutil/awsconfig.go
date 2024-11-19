@@ -23,16 +23,17 @@ import (
 )
 
 var defaultProfile string
+var defaultRegion string
 
 func GetSDKConfig() aws.Config {
 	scp, _ := config.LoadSharedConfigProfile(context.TODO(), defaultProfile)
 	env_region, env_present := os.LookupEnv("AWS_REGION")
 
+	scp.Region = "us-east-1"
 	if env_present {
 		scp.Region = env_region
-	} else if scp.Region == "" {
-		scp.Region = "us-east-1"
 	}
+	defaultRegion = scp.Region
 
 	cfg, _ := config.LoadDefaultConfig(
 		context.TODO(),
@@ -45,4 +46,9 @@ func GetSDKConfig() aws.Config {
 
 func SetProfile(profile string) {
 	defaultProfile = profile
+}
+
+// Gets the region for default aws sessions
+func GetRegion() (region string) {
+	return defaultRegion
 }
