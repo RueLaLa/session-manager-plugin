@@ -15,19 +15,24 @@
 package communicator
 
 import (
+	"context"
 	"errors"
+	"net/http"
+	"net/url"
 	"sync"
 	"time"
 
+	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	"github.com/aws/session-manager-plugin/pkg/config"
 	"github.com/aws/session-manager-plugin/pkg/log"
+	"github.com/aws/session-manager-plugin/pkg/sdkutil"
 	"github.com/aws/session-manager-plugin/pkg/websocketutil"
 	"github.com/gorilla/websocket"
 )
 
 // IWebSocketChannel is the interface for DataChannel.
 type IWebSocketChannel interface {
-	Initialize(channelUrl string, channelToken string)
+	Initialize(channelUrl string, channelToken string, region string, signer *v4.Signer)
 	Open() error
 	Close() error
 	SendMessage(input []byte, inputType int) error
@@ -49,6 +54,8 @@ type WebSocketChannel struct {
 	writeLock    *sync.Mutex
 	Connection   *websocket.Conn
 	ChannelToken string
+	Region       string
+	Signer       *v4.Signer
 }
 
 // GetChannelToken gets the channel token
@@ -77,9 +84,11 @@ func (webSocketChannel *WebSocketChannel) SetOnMessage(onMessageHandler func([]b
 }
 
 // Initialize initializes websocket channel fields
-func (webSocketChannel *WebSocketChannel) Initialize(channelUrl string, channelToken string) {
+func (webSocketChannel *WebSocketChannel) Initialize(channelUrl string, channelToken string, region string, signer *v4.Signer) {
 	webSocketChannel.ChannelToken = channelToken
 	webSocketChannel.Url = channelUrl
+	webSocketChannel.Region = region
+	webSocketChannel.Signer = signer
 }
 
 // StartPings starts the pinging process to keep the websocket channel alive.
@@ -121,6 +130,48 @@ func (webSocketChannel *WebSocketChannel) SendMessage(input []byte, inputType in
 	return err
 }
 
+// getV4SignatureHeader gets the signed header.
+func (webSocketChannel *WebSocketChannel) getV4SignatureHeader(Url string) (http.Header, error) {
+	request, err := http.NewRequest("GET", Url, nil)
+
+	creds, _ := sdkutil.GetSDKConfig().Credentials.Retrieve(context.TODO())
+	if webSocketChannel.Signer != nil {
+		err = webSocketChannel.Signer.SignHTTP(context.TODO(), creds, request, "", config.ServiceName, webSocketChannel.Region, time.Now())
+		if err != nil {
+			log.Errorf("Failed to sign websocket, %v", err)
+		}
+	}
+	return request.Header, err
+}
+
+// isPresignedURL check is the url presigned.
+func isPresignedURL(rawURL string) (bool, error) {
+	parsedURL, err := url.Parse(rawURL)
+	if err != nil {
+		return false, err
+	}
+
+	queryParams := parsedURL.Query()
+
+	presignedURLParams := []string{
+		"X-Amz-Algorithm",
+		"X-Amz-Credential",
+		"X-Amz-Date",
+		"X-Amz-Expires",
+		"X-Amz-SignedHeaders",
+		"X-Amz-Signature",
+		"X-Amz-Security-Token",
+	}
+
+	for _, param := range presignedURLParams {
+		if _, exists := queryParams[param]; exists {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
 // Close closes the corresponding connection.
 func (webSocketChannel *WebSocketChannel) Close() error {
 
@@ -139,9 +190,22 @@ func (webSocketChannel *WebSocketChannel) Close() error {
 func (webSocketChannel *WebSocketChannel) Open() error {
 	// initialize the write mutex
 	webSocketChannel.writeLock = &sync.Mutex{}
-
-	ws, err := websocketutil.NewWebsocketUtil(nil).OpenConnection(webSocketChannel.Url)
+	presigned, err := isPresignedURL(webSocketChannel.Url)
 	if err != nil {
+		return err
+	}
+
+	var header http.Header
+	if !presigned {
+		header, err = webSocketChannel.getV4SignatureHeader(webSocketChannel.Url)
+		if err != nil {
+			log.Errorf("Failed to get the v4 signature, %v", err)
+		}
+	}
+
+	ws, err := websocketutil.NewWebsocketUtil(nil).OpenConnection(webSocketChannel.Url, header)
+	if err != nil {
+		log.Errorf("Failed to open WebSocket connection: %v", err)
 		return err
 	}
 	webSocketChannel.Connection = ws

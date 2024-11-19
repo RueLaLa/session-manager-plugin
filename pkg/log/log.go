@@ -29,7 +29,7 @@ func init() {
 func displayMessage(level, msg string) {
 	if LogLevels[level] >= LogLevels[LOG_LEVEL] {
 		Log.SetPrefix(fmt.Sprintf("%s: ", level))
-		Log.Printf("%s\n", msg)
+		Log.Printf("%s\r\n", msg)
 	}
 }
 

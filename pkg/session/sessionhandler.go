@@ -18,6 +18,7 @@ import (
 	"context"
 	"math/rand"
 
+	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/aws/session-manager-plugin/pkg/config"
 	"github.com/aws/session-manager-plugin/pkg/log"
@@ -35,8 +36,9 @@ func (s *Session) OpenDataChannel() (err error) {
 		MaxAttempts:         config.DataChannelNumMaxRetries,
 	}
 
+	s.Signer = v4.NewSigner()
 	s.DataChannel.Initialize(s.ClientId, s.SessionId, s.TargetId, s.IsAwsCliUpgradeNeeded)
-	s.DataChannel.SetWebsocket(s.StreamUrl, s.TokenValue)
+	s.DataChannel.SetWebsocket(s.StreamUrl, s.TokenValue, s.Region, s.Signer)
 	s.DataChannel.GetWsChannel().SetOnMessage(
 		func(input []byte) {
 			s.DataChannel.OutputMessageHandler(s.Stop, s.SessionId, input)
@@ -95,7 +97,7 @@ func (s *Session) GetResumeSessionParams() (string, error) {
 	)
 
 	s.sdk = ssm.NewFromConfig(sdkutil.GetSDKConfig())
-
+	s.Signer = v4.NewSigner()
 	resumeSessionInput := ssm.ResumeSessionInput{
 		SessionId: &s.SessionId,
 	}
@@ -135,6 +137,7 @@ func (s *Session) TerminateSession() error {
 	)
 
 	s.sdk = ssm.NewFromConfig(sdkutil.GetSDKConfig())
+	s.Signer = v4.NewSigner()
 
 	terminateSessionInput := ssm.TerminateSessionInput{
 		SessionId: &s.SessionId,
