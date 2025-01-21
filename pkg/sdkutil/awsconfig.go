@@ -29,7 +29,9 @@ func GetSDKConfig() aws.Config {
 	scp, _ := config.LoadSharedConfigProfile(context.TODO(), defaultProfile)
 	env_region, env_present := os.LookupEnv("AWS_REGION")
 
-	scp.Region = "us-east-1"
+	if scp.Region == "" {
+		scp.Region = "us-east-1"
+	}
 	if env_present {
 		scp.Region = env_region
 	}
